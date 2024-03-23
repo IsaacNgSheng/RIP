@@ -13,5 +13,4 @@ if __name__ == "__main__":
     print("Liste initiale :", list)
 
     tri_a_bulle(list)
-
     print("Liste triée :", list)
