@@ -1,4 +1,4 @@
 # Computer Problem Solving Project RIP
 
 ### Contributors
-Isaac Ng Sheng
+Isaac Ng Sheng isaacngsheng@gmail.com
