@@ -2,9 +2,9 @@
 
 def tri_a_bulle(t):
     for i in range(len(t)):
-        for j in range(i-1):
+        for j in range(i):
             if t[j] > t[j + 1]:
-                t[j], t[j + 1] = t[j - 1], t[j+1]
+                t[j], t[j + 1] = t[j + 1], t[j]
 
 
 if __name__ == "__main__":
