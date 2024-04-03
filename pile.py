@@ -4,15 +4,15 @@ from produit import Produit
 class Pile:
     def __init__(self, p:Produit = None):
         #ici on ne crée la pile que si on a un produit à mettre dedans
-        pass
+        self.Produit = Produit
 
     def nb_items(self):
         #nombre d'éléments dans la pile
-        pass
+        return self.Produit.get_max_pile()
 
     def is_complete(self):
         #renvoie vrai si on ne peut plus ajouter d'éléments
-        pass
+        if self.nb_items()
 
     def empiler(self, p):
         #empile que si on peut rajouter des items
