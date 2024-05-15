@@ -6,6 +6,7 @@ Le projet “RIP” doit vous permettre de mobiliser tous les concepts vus en AP
 * IPPOLITI Côme
 * VANG Sean
 * NG Isaac
+* BODIN Alexandre
 
 ## Manuel d'utilisation
 - [ ] Comment exécuter votre code
