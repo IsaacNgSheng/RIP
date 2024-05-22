@@ -14,14 +14,16 @@ class TypeCommande():
 filename = 'C:/Users/Isaac/OneDrive/Documents/NUS/Exchange/Notes/RIP/Proj/InstanceA.csv'
 data_rows = []
 
-with open(filename, mode='r') as file:
-    csv_reader = csv.reader(file, delimiter=' ')
-    for row in csv_reader:
-        if row:  # Ensure row is not empty
-            nb = [row[3], row[4]]
-            data_row = TypeCommande(row[0], row[1], row[2], nb)
-            data_rows.append(data_row)
+def get():
+    with open(filename, mode='r') as file:
+        csv_reader = csv.reader(file, delimiter=' ')
+        for row in csv_reader:
+            if row:  # Ensure row is not empty
+                nb = [row[3], row[4]]
+                data_row = TypeCommande(row[0], row[1], row[2], nb)
+                data_rows.append(data_row)
+        return data_rows
 
 # Print the list of DataRow objects
-for data_row in data_rows:
+for data_row in get():
     print(data_row)
