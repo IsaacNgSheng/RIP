@@ -1,5 +1,5 @@
 class TypeProduit():
-    def __init__(self, id:str, s:int, p=int, h_prod=int, l_prod=int, w_prod=int, nbEmpileMax=int):
+    def __init__(self, id:str, s:int, p:int, h_prod:int, l_prod:int, w_prod:int, nbEmpileMax:int):
         #id = identifier; s = setup time; p = assembly time; h_prod = height, l_prod = length, 
         #w_prod = width; nbEmpileMax = maximum number of items;
         #super().__init__(id, s, p, h_prod, l_prod, w_prod, nbEmpileMax)
