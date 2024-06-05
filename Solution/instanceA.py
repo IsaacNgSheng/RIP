@@ -1,6 +1,5 @@
 import json
 import csv
-from datetime import datetime, timedelta
 
 class Produit:
     def __init__(self, profondeur, hauteur, empilage_max):
@@ -94,6 +93,76 @@ class TypeBox:
     def __str__(self):
         return f"TypeBox(id={self.id}, h={self.h}, l={self.l}, prix={self.prix})"
 
+class Lignes_de_Production:
+    def __init__(self, id, esi, current_storage=0):
+        self.id = id
+        self.esi = esi
+        self.current_storage = current_storage
+        self.composant = None
+        self.produit = 0
+        self.current_time = 0
+        self.materials = {"verre": 0, "membrane": 0, "eva": 0, "cell_A": 0, "cell_B": 0}
+
+    def __str__(self):
+        return f"Lignes_de_Production(id={self.id}, operation={self.operation}, esi={self.esi}, current_storage={self.current_storage})"
+
+    def fabrication(self, composant):
+        datedebut=0
+        self.composant = composant
+        self.current_time += self.composant.s
+        print(f"temps de setup : {self.composant.s}, current time: {self.current_time}")
+        self.current_time += self.composant.t
+        print(f"temps de fabrication (par unité) : {self.composant.t}, current time: {self.current_time}")
+        return (self.current_time, datedebut)
+
+    def decoupe(self, composant):
+        self.composant = composant
+        self.current_time += self.composant.s
+        print(f"temps setup : {self.composant.s}, current time: {self.current_time}")
+        self.current_time += self.composant.t
+        print(f"temps de decoupe (par unité) : {self.composant.t}, current time: {self.current_time}")
+        return self.current_time
+
+    def assemblage(self, produit:list, commandes):
+        datedebut = 0
+        curr_time = 0
+        self.produit = produit
+        PA = commandes[0].nb
+        PB = commandes[1].nb
+        while PA > 0:
+            self.current_time += self.composant.s
+            self.current_time += self.composant.p
+            self.materials["verre"] += 1
+            self.materials["membrane"] += 1
+            self.materials["eva"] += 2
+            self.materials["cell_A"] += 1
+            PA -= 1
+        while PB > 0:
+            self.current_time += self.composant.s
+            self.current_time += self.composant.p
+            self.materials["verre"] += 1
+            self.materials["membrane"] += 1
+            self.materials["eva"] += 2
+            self.materials["cell_B"] += 1
+            PB -= 1
+        for item in self.materials.items():
+            if item[1] > 0:
+                if item[0] == 'verre' or item[0] == 'membrane' or item[0] == 'eva':
+                    curr_time = self.decoupe(item[0])
+                elif item[0] == 'cell_A' or item[0] == 'cell_B':
+                    curr_time = self.fabrication(item[0])
+            if item[0] == 'verre' and item[1] > 5:
+                datedebut_verre = curr_time
+            if item[0] == 'membrane' and item[1] > 5:
+                datedebut_membrane = curr_time
+            if item[0] == 'eva' and item[1] > 5:
+                datedebut_eva = curr_time
+            if item[0] == 'cell_A' and item[1] > 5:
+                datedebut_cellA = curr_time
+            if item[0] == 'cell_B' and item[1] > 5:
+                datedebut_cellB = curr_time
+        return self.current_time
+
 class Stockage:
     def __init__(self):
         self.types_box = {}
@@ -109,6 +178,21 @@ class Stockage:
                 self.types_box[id]["nb_achetes"] += 1
                 self.boxes.append({"id": id, "num": self.types_box[id]["nb_achetes"]})
                 self.nb_total_achetes += nb_achetes 
+
+    def dEnvoie(dEnvoiPrevue, ligne_product:Lignes_de_Production):
+        assem_time = ligne_product.assemblage()
+        if assem_time < dEnvoiPrevue:
+            return dEnvoiPrevue 
+        else :
+            return ligne_product
+        '''
+        if assem_time > dEnvoiPrevue:
+            delay = assem_time - dEnvoiPrevue
+        else:
+            timebox = dEnvoiPrevue - assem_time
+        '''
+        
+
 
     def __str__(self):
         return f"Stockage(types_box={self.types_box}, boxes={self.boxes})"
@@ -202,14 +286,21 @@ def obtenir_identifiants_composants(composants):
     return identifiants
 
 def main():
-    instanceA = lire_json('../RIP/instanceA.json')
+    instanceA = lire_json('../Solution/instanceA.json')
     csv_file = 'InstanceA.csv'
-
+    total_time = 0
     # Creation des objets a partir des donnees JSON
-    lignes = [LigneProduction(**ligne) for ligne in instanceA['lignes']]
-    composants = [TypeComposant(**composant) for composant in instanceA['types_composants']]
-    produits = [TypeProduit(**produit) for produit in instanceA['types_produits']]
-    types_box = [TypeBox(**box) for box in instanceA['types_box']]
+    lignes, composants, produits, types_box = [], [], [], []
+    for l in instanceA['lignes']:
+        lignes.append(LigneProduction(**l))
+    for c in instanceA['types_composants']:
+        composants.append(LigneProduction(**c))
+    #produits = [TypeProduit(**produit) for produit in instanceA['types_produits']]
+    for p in instanceA['types_produits']:
+        produits.append(LigneProduction(**p))
+    #types_box = [TypeBox(**box) for box in instanceA['types_box']]
+    for b in instanceA['types_box']:
+        produits.append(LigneProduction(**b))
     commandes = []
 
 
@@ -230,12 +321,16 @@ def main():
     stockage = Stockage()
     for box in types_box:
         stockage.ajouter_type_box(box.id, box.h, box.l, box.prix)
+
+    '''
     # Exemple d'utilisation
     lignes_production = [
         LigneProduction(1, "fabrication", 50),
         LigneProduction(2, "decoupe", 60),
         LigneProduction(3, "assemblage", 70)
     ]
+    '''
+    
 
     # Calcul de l'évaluation de la solution
     eval_solution = 0
@@ -256,28 +351,29 @@ def main():
     # Dictionnaire pour stocker les dates d'envoi réelles de chaque commande
     dates_dEnvoi = {}
 
+    lignes_production = Lignes_de_Production(lignes[0]["id"], lignes[0]["esi"])
     for commande in commandes:
-        date_envoi = "2995"  # PB a changer et a calculer (date à laquelle on a vide tous les box de la commande)
-        dates_dEnvoi[commande.id] = date_envoi
+        dates_dEnvoi[commande.id] = stockage.dEnvoie(commande.dEnvoiPrevue, lignes_production.assemblage(commandes)) # PB a changer et a calculer (date à laquelle on a vide tous les box de la commande)
+        
 
     # Ajout de la pénalité pour les délais des commandes
     for commande in commandes:
         nb_produits = sum(commande.nb)  # Nombre total de produits pour la commande
         dEnvoi = dates_dEnvoi.get(commande.id)
-        if dEnvoi:
+        if dEnvoi is not None:
             # Calculer la différence en jours
             days_difference = abs(int(dEnvoi) - int(commande.dEnvoiPrevue))
             eval_solution += nb_produits * 10 * days_difference
 
     # Ecrire les résultats dans le fichier de sortie
     total_time = 0
-    output_file = '../RIP/instanceA.sol'
+    output_file = '../Solution/instanceA.sol'
     with open(output_file, 'w') as file:
-        file.write(f"Evaluation solution = {eval_solution}\n")
+        file.write(f"{eval_solution}\n")
         for box_id, box_info in stockage.types_box.items():
-            file.write(f"BOX = {box_id} et nombre de box achetés = {box_info['nb_achetes']}\n")
+            file.write(f"{box_id} {box_info['nb_achetes']}\n")
         for commande in commandes:
-            file.write(f"COMMANDE = {commande.id} et date d'envoie = {dates_dEnvoi[commande.id]}\n")
+            file.write(f"{commande.id} {dates_dEnvoi[commande.id]}\n")
 
         # Simulation
         current_box_index = 0
@@ -290,7 +386,8 @@ def main():
                     for _ in range(nb):
                         id_commande = commande.id
                         id_type = types_box[idx].id
-                        date_debut_production = "3000"
+                        #date_envoi = time in instanceA.csv - sum(all function times)
+                        date_envoi = dates_dEnvoi[commande.id]
                         
                         # Vérifier que current_box_index ne dépasse pas les limites de stockage.boxes
                         if current_box_index < len(stockage.boxes):
@@ -307,7 +404,7 @@ def main():
                             membrane_id = identifiants_composants["membrane"]
                             
                             # Écrire les informations dans le fichier (a savoir, on a fixe pour les box nb_achete = 1)
-                            file.write(f" Id commande = {id_commande} Type = {id_type} Num ligne = {num_ligne} Date debut prod = {date_debut_production} Box id = {id_box} Num box = {num_box} Composants = {cellules_id} {eva_id} {eva_id} {verre_id} {membrane_id}\n")
+                            file.write(f" {id_commande} {id_type} {num_ligne} {date_dEnvoi} {id_box} {num_box} {cellules_id} {eva_id} {eva_id} {verre_id} {membrane_id}\n")
                             
                             # Passer à la box suivante
                             current_box_index = (current_box_index + 1) % len(stockage.boxes)
@@ -319,9 +416,9 @@ def main():
 
         for composant in composants:
             num_ligne = lignes_production[current_ligne_index].id if current_ligne_index < len(lignes_production) else None
-            file.write(f"Id = {composant.id} Type = {composant.m} Num ligne = {num_ligne}\n ") 
+            file.write(f"{composant.id} {composant.m} {num_ligne}\n ") 
             #ligne qui l'a produite
-            file.write(f"Date envoi prevue: {datetime.now() + timedelta(minutes=total_time - (composant.s + composant.t))}\n")
+            file.write(f"{total_time - (composant.s + composant.t)}\n")
             current_ligne_index = (current_ligne_index + 1) % len(lignes_production)
                                 
                                 
