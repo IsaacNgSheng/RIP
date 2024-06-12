@@ -1,6 +1,5 @@
 import json
 import csv
-from datetime import datetime, timedelta
 
 class Produit:
     def __init__(self, profondeur, hauteur, empilage_max):
@@ -18,9 +17,10 @@ class Produit:
         return f"Produit(profondeur={self.profondeur}, hauteur={self.hauteur}, empilage_max={self.empilage_max})"
 
 class Pile:
-    def __init__(self, p=None):
-        self.produit = p
-        self.nombre = 0
+    def __init__(self, typeprod):
+        self.typeprod = typeprod
+        self.hauteur = 0
+        self.longueur = self.typeprod.l
 
     def nb_items(self):
         return self.nombre
@@ -39,10 +39,13 @@ class Pile:
         return f"Pile(nombre={self.nombre}, produit={self.produit})"
 
 class LigneProduction:
-    def __init__(self, id, operation, esi):
+    def __init__(self, id, operation, esi, index, dernier=None, timer=None):
         self.id = id
         self.operation = operation
         self.esi = esi
+        self.index = index
+        self.dernier = ""
+        self.timer = 0
 
     def __str__(self):
         return f"LigneProduction(id={self.id}, operation={self.operation}, esi={self.esi})"
@@ -57,6 +60,14 @@ class TypeComposant:
         self.l = l
         self.w = w
 
+class Commandes:
+    def __init__(self, id, tps_qualite, dEnvoiPrevue, quantite, ddemande_box=None, date_envoi=None):
+        self.id = id
+        self.tps_qualite = tps_qualite
+        self.dEnvoiPrevue = dEnvoiPrevue
+        self.quantite = quantite
+        self.date_envoi = 0
+        self.ddemande_box = ddemande_box #si besoin de box, achat d'un box dont on cherchera la date de demande du box
 
     def __str__(self):
         return f"TypeComposant(id={self.id}, m={self.m}, s={self.s}, t={self.t}, h={self.h}, l={self.l}, w={self.w})"
@@ -84,15 +95,115 @@ class TypeCommande:
     def __str__(self):
         return f"TypeCommande(id={self.id}, stockMin={self.stockMin}, dEnvoiPrevue={self.dEnvoiPrevue}, nb={self.nb})"
 
+class produitcompo: 
+    def __init__(self, idcomposant, idtype, type_composant, idligne, ddebut):
+        self.idcomposant = idcomposant
+        self.idtype = idtype
+        self.type_composant = type_composant
+        self.idligne = idligne
+        self.ddebut = ddebut  
+
+class prod_unitaire : 
+    def __init__(self, idcommande, c, p, idTypeProduit, index, ddebut, idcomposant =None):
+        self.idcommande = idcommande #W
+        self.commande = c
+        self.produit = p
+        self.idTypeProduit = idTypeProduit
+        self.index = index
+        self.ddebut = ddebut
+        self.idbox = None
+        self.box = None
+        self.idcomposant = idcomposant 
+
 class TypeBox:
-    def __init__(self, id, h, l, prix):
+    def __init__(self, id, h, l, prix, nb_achatbox = 0):
         self.id = id
         self.h = h
         self.l = l
         self.prix = prix
+        self.nb_achatbox = nb_achatbox
 
     def __str__(self):
         return f"TypeBox(id={self.id}, h={self.h}, l={self.l}, prix={self.prix})"
+
+class TypesLigne:
+    def __init__(self, identifiant, types_operation, stock_esi, index, dernier=None, timer=None):
+        self.identifiant = identifiant
+        self.types_operation = types_operation
+        self.stock_esi = stock_esi
+        self.index = index
+        self.dernier = ""
+        self.timer = 0
+
+class Lignes_de_Production:
+    def __init__(self, id, esi, current_storage=0):
+        self.id = id
+        self.esi = esi
+        self.current_storage = current_storage
+        self.composant = None
+        self.produit = 0
+        self.current_time = 0
+        self.materials = {"verre": 0, "membrane": 0, "eva": 0, "cell_A": 0, "cell_B": 0}
+
+    def __str__(self):
+        return f"Lignes_de_Production(id={self.id}, operation={self.operation}, esi={self.esi}, current_storage={self.current_storage})"
+
+    def fabrication(self, composant):
+        datedebut=0
+        self.composant = composant
+        self.current_time += self.composant.s
+        print(f"temps de setup : {self.composant.s}, current time: {self.current_time}")
+        self.current_time += self.composant.t
+        print(f"temps de fabrication (par unité) : {self.composant.t}, current time: {self.current_time}")
+        return (self.current_time, datedebut)
+
+    def decoupe(self, composant):
+        self.composant = composant
+        self.current_time += self.composant.s
+        print(f"temps setup : {self.composant.s}, current time: {self.current_time}")
+        self.current_time += self.composant.t
+        print(f"temps de decoupe (par unité) : {self.composant.t}, current time: {self.current_time}")
+        return self.current_time
+
+    def assemblage(self, produit:list, commandes):
+        datedebut = 0
+        curr_time = 0
+        self.produit = produit
+        PA = commandes[0].nb
+        PB = commandes[1].nb
+        while PA > 0:
+            self.current_time += self.composant.s
+            self.current_time += self.composant.p
+            self.materials["verre"] += 1
+            self.materials["membrane"] += 1
+            self.materials["eva"] += 2
+            self.materials["cell_A"] += 1
+            PA -= 1
+        while PB > 0:
+            self.current_time += self.composant.s
+            self.current_time += self.composant.p
+            self.materials["verre"] += 1
+            self.materials["membrane"] += 1
+            self.materials["eva"] += 2
+            self.materials["cell_B"] += 1
+            PB -= 1
+        for item in self.materials.items():
+            if item[1] > 0:
+                if item[0] == 'verre' or item[0] == 'membrane' or item[0] == 'eva':
+                    curr_time = self.decoupe(item[0])
+                elif item[0] == 'cell_A' or item[0] == 'cell_B':
+                    curr_time = self.fabrication(item[0])
+            if item[0] == 'verre' and item[1] > 5:
+                datedebut_verre = curr_time
+            if item[0] == 'membrane' and item[1] > 5:
+                datedebut_membrane = curr_time
+            if item[0] == 'eva' and item[1] > 5:
+                datedebut_eva = curr_time
+            if item[0] == 'cell_A' and item[1] > 5:
+                datedebut_cellA = curr_time
+            if item[0] == 'cell_B' and item[1] > 5:
+                datedebut_cellB = curr_time
+        return self.current_time
 
 class Stockage:
     def __init__(self):
@@ -110,65 +221,67 @@ class Stockage:
                 self.boxes.append({"id": id, "num": self.types_box[id]["nb_achetes"]})
                 self.nb_total_achetes += nb_achetes 
 
+    def dEnvoie(dEnvoiPrevue, ligne_product:Lignes_de_Production):
+        assem_time = ligne_product.assemblage()
+        if assem_time < dEnvoiPrevue:
+            return dEnvoiPrevue 
+        else :
+            return ligne_product
+        '''
+        if assem_time > dEnvoiPrevue:
+            delay = assem_time - dEnvoiPrevue
+        else:
+            timebox = dEnvoiPrevue - assem_time
+        '''
+        
+
+
     def __str__(self):
         return f"Stockage(types_box={self.types_box}, boxes={self.boxes})"
 
-class Box(TypeBox):
-    def __init__(self, typeB, s, p, mh, id, h, l, prix, nbEmpileMax):
-        super().__init__(id, h, l, prix)
-        self.s = s
-        self.p = p
-        self.mh = mh
-        self.typeB = typeB
-        self.pileL = 0
-        self.pileH = {}
-        self.command_id = None
-        self.nbEmpileMax = nbEmpileMax
-        self.pile = []
+class box:
+    def __init__(self, types_box, nb):
+        self.contenu_box = []  # liste pour stocker les unites de produits par box
+        self.type=types_box
+        self.commande = None  # Attribut pour associer la commande à laquelle le box correspond
+        self.piles=[] # liste des piles
+        self.nombre_achats_box =nb  # Attribut pour suivre le nombre de box achetés de ce type
+        self.long_res=self.type.l
+        self.time=0 # i added a new attribute
 
-    def __str__(self):
-        return f"Box(typeB={self.typeB}, s={self.s}, p={self.p}, mh={self.mh}, id={self.id}, h={self.h}, l={self.l}, prix={self.prix}, nbEmpileMax={self.nbEmpileMax}, pileL={self.pileL}, pileH={self.pileH}, command_id={self.command_id})"
+    def empiler(self, unite, pile) : # permet de savoir si on peut empiler dans une pile
+        valeur=False
+        if (unite.produit==pile.typeprod):
+            if ((pile.hauteur<unite.produit.nbEmpileMax*unite.produit.hauteur) and (pile.hauteur < self.type.h)) and    self.commande==unite.commande: # tant que la hauteur de la pile ne dépasse pas la hauteur du box, on peut empiler
+                valeur=True
+        return valeur
 
-    def get_price(self):
-        return self.prix
-
-    def is_empty(self):
-        return len(self.pile) == 0
-
-    def can_add_unit(self, typeP):
-        if self.command_id is None:
-            return True
-        if self.pileL + typeP.l <= self.l:
-            return True
-        if typeP.id not in self.pileH:
-            return True
-        return self.pileH[typeP.id] + typeP.h <= self.h
-
-    def add_unit(self, typeP):
-        if not self.can_add_unit(typeP):
-            raise ValueError("Cannot add unit to this box")
-        if self.command_id is None:
-            self.command_id = typeP.id
-
-        if typeP.id not in self.pileH:
-            self.pileH[typeP.id] = 0
-            self.pile.append([])
-
-        for p in self.pile:
-            if len(p) < self.nbEmpileMax and (not p or p[0].id == typeP.id):
-                p.append(typeP)
-                self.pileH[typeP.id] += typeP.h
-                return
-
-        self.pile.append([typeP])
-        self.pileL += typeP.l
-        self.pileH[typeP.id] += typeP.h
-
-    def empty_box(self):
-        self.pile = []
-        self.pileL = 0
-        self.pileH = {}
-        self.command_id = None
+    def remplirPile(self,unite,p) :  
+        self.contenu_box.append(unite) 
+        self.commande=unite.commande #associe unité à une commande 
+        p.hauteur += unite.produit.h #mise à jour pile
+                
+    def remplir_nouvelle_pile(self,unite) : # créer une nouvelle pile
+        if (self.long_res - unite.produit.l>=0) : 
+            self.contenu_box.append(unite) 
+            self.commande=unite.commande
+            p1 = Pile(unite.produit)
+            self.piles.append(p1)
+            p1.hauteur += unite.produit.h
+            self.long_res -= p1.longueur
+        
+        
+    def vider(self) :
+        self.contenu_box =[]
+        self.piles =[]
+        self.commande=None
+        self.long_res=self.type.l
+        
+    def est_vide(self) :
+        valeur=False
+        if (self.commande==None and len(self.piles)==0 and len(self.contenu_box)==0) :
+            valeur=True
+        return valeur
 
 def lire_json(fichier):
     with open(fichier, 'r') as f:
@@ -201,131 +314,363 @@ def obtenir_identifiants_composants(composants):
 
     return identifiants
 
-def main():
-    instanceA = lire_json('../RIP/instanceA.json')
-    csv_file = 'InstanceA.csv'
+class FactorySimulation:
+    def __init__(self, file_CSV, file_JSON):
+        self.type_box = {}
+        self.components = self.ajout_composants(file_JSON)
+        self.products = self.ajout_produits(file_JSON)
+        self.orders = self.ajout_commande(file_CSV)
+        self.production_lines = self.ajout_lignes_prod(file_JSON)
+        self.type_de_box = self.ajout_type_box(file_JSON)
+        self.boxachetes = []
+        self.unities_produced = []
+        self.components_produced = []
+        self.box_used = []
+        self.pile = []
+        self.dict_box_commande = dict()
+        self.box_commande = {}
+        self.eval = 0
+        self.indice = 0
+        self.listProducedUnities = []
+        
+        #OPTIMIZATION
+        self.orders.sort(key=lambda order: order.dEnvoiPrevue)
+        
 
-    # Creation des objets a partir des donnees JSON
-    lignes = [LigneProduction(**ligne) for ligne in instanceA['lignes']]
-    composants = [TypeComposant(**composant) for composant in instanceA['types_composants']]
-    produits = [TypeProduit(**produit) for produit in instanceA['types_produits']]
-    types_box = [TypeBox(**box) for box in instanceA['types_box']]
-    commandes = []
+    def ajout_composants(self, file_path):
+        with open(file_path, 'r') as file:
+            data = json.load(file)
+            listComposants = [TypeComposant(tc["id"], tc["m"], tc["s"], tc["t"], tc["h"], tc["l"], tc.get("w")) for tc in data["types_composants"]]
+            return listComposants
 
+    def ajout_produits(self, file_path):
+        with open(file_path, 'r') as file:
+            data = json.load(file)
+            listTypesProduits = [TypeProduit(tp["id"], tp["s"], tp["p"], tp["h"], tp["l"], tp["w"], tp["nbEmpileMax"]) for tp in data["types_produits"]]
+            return listTypesProduits
 
-    with open(csv_file, mode='r') as file:
-        csv_reader = csv.reader(file, delimiter=' ')
-        for row in csv_reader:
-            if row:
-                nb = [row[3], row[4]]
-                try:
-                    dEnvoiPrevue = row[2]
-                    commandes.append(TypeCommande(row[0], row[1], dEnvoiPrevue, nb))
-                except ValueError:
-                    continue
-                
-    # Obtenir les identifiants des composants en appelant la fonction
-    identifiants_composants = obtenir_identifiants_composants(composants)
+    def ajout_commande(self, file_path):
+        with open(file_path, 'r') as file:
+            csv_reader = csv.reader(file, delimiter=' ')
+            
+            listCommandes = []
+            for row in csv_reader:
+                #print(row)
+                identifiant = row[0]
+                temps_qualite = int(row[1])
+                date_envoi = int(row[2])
+
+                numberOfEachProduct = []
+
+                for i in range(3, len(row)):
+                    numberOfEachProduct.append(int(row[i]))
+
+                oneCommande = Commandes(identifiant, temps_qualite, date_envoi, numberOfEachProduct)
+                listCommandes.append(oneCommande)
+            return listCommandes
+
+    def ajout_lignes_prod(self, file_path):
+        with open(file_path, 'r') as file:
+            data = json.load(file)
+            listLignes = [TypesLigne(l["id"], l["operation"], l["esi"], index + 1) for index, l in enumerate(data["lignes"])]
+            return listLignes
+
     
-    stockage = Stockage()
-    for box in types_box:
-        stockage.ajouter_type_box(box.id, box.h, box.l, box.prix)
-    # Exemple d'utilisation
-    lignes_production = [
-        LigneProduction(1, "fabrication", 50),
-        LigneProduction(2, "decoupe", 60),
-        LigneProduction(3, "assemblage", 70)
-    ]
+    def ajout_type_box(self, file_path):
+        with open(file_path, 'r') as file:
+            data = json.load(file)
+            listTypesBox = [TypeBox(tb["id"], tb["h"], tb["l"], tb["prix"]) for tb in data["types_box"]]
+            return listTypesBox
+        
+    def set_eval(self, value):
+        self.eval = value
+       
+    
 
-    # Calcul de l'évaluation de la solution
-    eval_solution = 0
+    def run_simulation_production(self):
+        listCommandes = self.orders
+        listTypesProduits = self.products
+        listComposants = self.components
+        listLignes = self.production_lines
+        listProducedComponents = self.components_produced
+        eval = self.eval
+        
 
-       # Ajout du coût des boxes achetées
-    for box_id, box_info in stockage.types_box.items():
-        #nb_achetes = box_info["nb_achetes"] 
-        #PROBLEME nb_achetes est toujours à 0, pour avoir une coherence pour la suite on fixe nb_achetes
-        nb_achetes = 1
-        eval_solution += int(box_info["prix"]) * nb_achetes  
+        for Commande in listCommandes:
+            #print("starting producing: ", Commande.identifiant)
+            nb_produits = 0
+            i = 0
+            for Product in listTypesProduits:
+                nb_produits = nb_produits + Commande.quantite[i]
+                #print("\n", Product.identifiant)
+                if Commande.quantite[i] == 0:
+                    #print("not produced")
+                    pass
+                else:
+                    #print("produced")
+                    
+                    verre = next((Component for Component in listComposants if Component.m == "verre" and Component.h == Product.h and Component.l == Product.l), None)
+                    #print(verre.identifiant)
+                    
+                    membrane = next((Component for Component in listComposants if Component.m == "membrane" and Component.h == Product.h and Component.l == Product.l), None)
+                    #print(membrane.identifiant)
+                    
+                    eva = next((Component for Component in listComposants if Component.m == "eva" and Component.h == Product.h and Component.l == Product.l), None)
+                    #print(eva.identifiant)
+                    
+                    cellules = next((Component for Component in listComposants if Product.w == Component.w), None)
+                    #print(cellules.identifiant)
+                    
+                    components_tobe_produced = [eva, eva, verre,membrane]
+                    
+                    lines_production = [ Line for Line in listLignes if Line.types_operation == "production" ]
+                    lines_production_notfull = [ Line for Line in lines_production if Line.stock_esi > 0 ]
+                    line_production_notfull_balancingload = max(lines_production_notfull, key=lambda Line: Line.stock_esi)
+                    #print(line_production_notfull_balancingload.identifiant)
+                    
+                    lines_used = []
+                    lines_used.append(line_production_notfull_balancingload)
+                    
+                    
+                    
+                    
 
-    # Acheter les boîtes en utilisant la valeur capturée ci-dessus
-    for box_id, box_info in stockage.types_box.items():
-        nb_achetes = 1
-        stockage.acheter_box(box_id, nb_achetes)
-
-
-    # Dictionnaire pour stocker les dates d'envoi réelles de chaque commande
-    dates_dEnvoi = {}
-
-    for commande in commandes:
-        date_envoi = "2995"  # PB a changer et a calculer (date à laquelle on a vide tous les box de la commande)
-        dates_dEnvoi[commande.id] = date_envoi
-
-    # Ajout de la pénalité pour les délais des commandes
-    for commande in commandes:
-        nb_produits = sum(commande.nb)  # Nombre total de produits pour la commande
-        dEnvoi = dates_dEnvoi.get(commande.id)
-        if dEnvoi:
-            # Calculer la différence en jours
-            days_difference = abs(int(dEnvoi) - int(commande.dEnvoiPrevue))
-            eval_solution += nb_produits * 10 * days_difference
-
-    # Ecrire les résultats dans le fichier de sortie
-    total_time = 0
-    output_file = '../RIP/instanceA.sol'
-    with open(output_file, 'w') as file:
-        file.write(f"Evaluation solution = {eval_solution}\n")
-        for box_id, box_info in stockage.types_box.items():
-            file.write(f"BOX = {box_id} et nombre de box achetés = {box_info['nb_achetes']}\n")
-        for commande in commandes:
-            file.write(f"COMMANDE = {commande.id} et date d'envoie = {dates_dEnvoi[commande.id]}\n")
-
-        # Simulation
-        current_box_index = 0
-        current_ligne_index = 0
-
-        # Vérification si nombre de box achete est nul
-        if stockage.boxes:
-            for commande in commandes:
-                for idx, nb in enumerate(commande.nb):
-                    for _ in range(nb):
-                        id_commande = commande.id
-                        id_type = types_box[idx].id
-                        date_debut_production = "3000"
+                    
+                    if line_production_notfull_balancingload.dernier != cellules.id:
+                        line_production_notfull_balancingload.timer = line_production_notfull_balancingload.timer + cellules.s
                         
-                        # Vérifier que current_box_index ne dépasse pas les limites de stockage.boxes
-                        if current_box_index < len(stockage.boxes):
-                            id_box = stockage.boxes[current_box_index]["id"]
-                            num_box = stockage.boxes[current_box_index]["num"]
-                            
-                            # Vérifier que current_ligne_index ne dépasse pas les limites de lignes_production
-                            num_ligne = lignes_production[current_ligne_index].id if current_ligne_index < len(lignes_production) else None
-                            
-                            # Identifiants des composants extraits
-                            cellules_id = identifiants_composants["cellules"]
-                            eva_id = identifiants_composants["eva"]
-                            verre_id = identifiants_composants["verre"]
-                            membrane_id = identifiants_composants["membrane"]
-                            
-                            # Écrire les informations dans le fichier (a savoir, on a fixe pour les box nb_achete = 1)
-                            file.write(f" Id commande = {id_commande} Type = {id_type} Num ligne = {num_ligne} Date debut prod = {date_debut_production} Box id = {id_box} Num box = {num_box} Composants = {cellules_id} {eva_id} {eva_id} {verre_id} {membrane_id}\n")
-                            
-                            # Passer à la box suivante
-                            current_box_index = (current_box_index + 1) % len(stockage.boxes)
+                    nouvelle_componant = produitcompo(
+                            len(self.components_produced)+1,
+                            cellules.id,
+                            cellules.m,
+                            line_production_notfull_balancingload.index,
+                            line_production_notfull_balancingload.timer
+                        )
+
+                    # Aggiunta dell'oggetto alla lista
+                    self.components_produced.append(nouvelle_componant)
+                    
+                    line_production_notfull_balancingload.timer = line_production_notfull_balancingload.timer + cellules.t 
+                      
+                    line_production_notfull_balancingload.dernier = cellules.id
+                    
+                    line_production_notfull_balancingload.stock_esi = line_production_notfull_balancingload.stock_esi - Commande.quantite[i]
+                    #print(line_production_notfull_balancingload.timer)
+                    #print(line_production_notfull_balancingload.stock_esi)
+                    
+                    for Component in components_tobe_produced:
+                        lines_decoupe = [ Line for Line in listLignes if Line.types_operation == "decoupe" ]
+                        lines_decoupe_notfull = [ Line for Line in lines_decoupe if Line.stock_esi > 0 ]
+                        line_decoupe_notfull_balancingload = max(lines_decoupe_notfull, key=lambda Line: Line.stock_esi)
+                        #print(line_decoupe_notfull_balancingload.identifiant)
                         
-                            # Passer à la ligne suivante
-                            current_ligne_index = (current_ligne_index + 1) % len(lignes_production)
+                        lines_used.append(line_decoupe_notfull_balancingload)
+                        
+                        if line_decoupe_notfull_balancingload.dernier != Component.id:
+                            line_decoupe_notfull_balancingload.timer = line_decoupe_notfull_balancingload.timer + Component.t
+                        
+                        nouvelle_componant = produitcompo(
+                            len(self.components_produced)+1,
+                            Component.id,
+                            Component.m,
+                            line_decoupe_notfull_balancingload.index,
+                            line_decoupe_notfull_balancingload.timer
+                        )
+
+                        # Aggiunta dell'oggetto alla lista
+                        self.components_produced.append(nouvelle_componant)
+                        
+                        line_decoupe_notfull_balancingload.timer = line_decoupe_notfull_balancingload.timer + Component.t
+                       
+                        
+                      
+                        line_decoupe_notfull_balancingload.dernier = Component.id
+                        
+                        line_decoupe_notfull_balancingload.stock_esi = line_decoupe_notfull_balancingload.stock_esi - Commande.quantite[i]
+                        #print(line_decoupe_notfull_balancingload.timer)
+                        #print(line_decoupe_notfull_balancingload.stock_esi)
+                          
+                    
+                    line_finishing_the_latest = max(lines_used, key=lambda Line: Line.timer)
+                    when_components_ready = line_finishing_the_latest.timer
+                    lines_assemblage = [ Line for Line in listLignes if Line.types_operation == "assemblage" ]
+                    line_assemblage_balancingload = min(lines_assemblage, key=lambda Line: Line.timer)
+                    starting_assembly = max(when_components_ready,line_assemblage_balancingload.timer)
+                    
+                    if line_assemblage_balancingload.timer < starting_assembly:
+                        line_assemblage_balancingload.timer = starting_assembly
+                    else:
+                        pass
+                        
+                        
+                    if line_assemblage_balancingload.dernier != Component.id:
+                        line_assemblage_balancingload.timer = line_assemblage_balancingload.timer + Product.p
+                    
+                    
+                    nouvelle_unite = prod_unitaire(
+                            Commande.id,
+                            Commande,
+                            Product,
+                            Product.id,
+                            line_assemblage_balancingload.index,
+                            line_assemblage_balancingload.timer,
+                            [str(self.components_produced[len(self.components_produced)-5].idcomposant),str(self.components_produced[len(self.components_produced)-4].idcomposant), str(self.components_produced[len(self.components_produced)-3].idcomposant),str(self.components_produced[len(self.components_produced)-2].idcomposant),str(self.components_produced[len(self.components_produced)-1].idcomposant)]
+                        )
+                    
+            
+        
+                    #print([verre.identifiant,membrane.identifiant,eva.identifiant,cellules.identifiant])
+                    # Aggiunta dell'oggetto alla lista
+                    self.listProducedUnities.append(nouvelle_unite)
+                    line_assemblage_balancingload.timer = line_assemblage_balancingload.timer + Commande.quantite[i]*Product.p #rimuovi setup quando non serve
+                        
+                      
+                    line_decoupe_notfull_balancingload.dernier = Component.id
+                    
+                    
+                    if Commande.ddemande_box == None:
+                        end_assembling_firstunit = starting_assembly + Product.s + Product.p
+                        Commande.ddemande_box = end_assembling_firstunit = starting_assembly + Product.s + Product.p
+                      
+                i = i + 1
+            
+            Commande.date_envoi = Commande.date_envoi + line_assemblage_balancingload.timer + Commande.tps_qualite #= max(pi,p2,p3,..)+stockmin+duree
+            
+            if Commande.date_envoi < Commande.dEnvoiPrevue:
+                Commande.date_envoi = Commande.dEnvoiPrevue
+            
+            
+            eval = eval + nb_produits * 10 * abs(Commande.date_envoi - Commande.dEnvoiPrevue)
+            factory_simulation.set_eval(eval)
+                             
+    
+     
+
+
+    
+    def acheter_box(self, type_box):
+        if type_box.id not in self.type_box.keys():
+            self.type_box[type_box.id] = 1
         else:
-            print("Erreur: Aucune box disponible dans stockage.boxes.")
+            self.type_box[type_box.id] += 1
+        B = box(type_box, self.type_box[type_box.id])
+        self.boxachetes.append(B)
+        type_box.nb_achatbox += 1
+        return B
 
-        for composant in composants:
-            num_ligne = lignes_production[current_ligne_index].id if current_ligne_index < len(lignes_production) else None
-            file.write(f"Id = {composant.id} Type = {composant.m} Num ligne = {num_ligne}\n ") 
-            #ligne qui l'a produite
-            file.write(f"Date envoi prevue: {datetime.now() + timedelta(minutes=total_time - (composant.s + composant.t))}\n")
-            current_ligne_index = (current_ligne_index + 1) % len(lignes_production)
-                                
-                                
-    print(f"Results written to {output_file}")
+    def stockage_unite(self):
+        eval = self.eval
+        boxachetes = self.boxachetes
+        valeur = True
+        indice = self.indice
+        addEval=0
 
+        for unite in self.listProducedUnities:
+            if unite.idcommande not in self.dict_box_commande:
+                self.dict_box_commande[unite.idcommande] = [unite]
+            else:
+                self.dict_box_commande[unite.idcommande].append(unite)
+
+            if unite.idcommande not in self.box_commande:
+                self.box_commande[unite.idcommande] = []
+
+            # Ensure boxes are reset if necessary
+            for elem1 in boxachetes:
+                for elem2 in self.box_commande.keys():
+                    if elem1 in self.box_commande[elem2]:
+                        valeur = False
+                if valeur == True:
+                    elem1.vider()
+        for elem in self.dict_box_commande.keys():
+            for i in range(len(self.dict_box_commande[elem])):
+                a = len(self.box_commande[self.dict_box_commande[elem][i].idcommande])
+                #print(self.box_commande)
+                for k in range(a):
+                    if a != 0:
+                        indice = len(self.box_commande[self.dict_box_commande[elem][i].idcommande][k].piles) - 1
+                        if self.box_commande[self.dict_box_commande[elem][i].idcommande][k].empiler(
+                                self.dict_box_commande[elem][i],
+                                self.box_commande[self.dict_box_commande[elem][i].idcommande][-1].piles[
+                                    indice]) == True:
+                            self.dict_box_commande[elem][i].box = self.box_commande[self.dict_box_commande[elem][i].idcommande][-1]
+                            self.dict_box_commande[elem][i].id = self.box_commande[self.dict_box_commande[elem][i].idcommande][-1].type.id
+                            self.dict_box_commande[elem][i].box.remplirPile(self.dict_box_commande[elem][i],
+                                                                            self.dict_box_commande[elem][i].box.piles[indice])
+                            self.dict_box_commande[elem][i].box.commande = self.dict_box_commande[elem][i].commande
+                        else:
+                            self.dict_box_commande[elem][i].box = self.box_commande[self.dict_box_commande[elem][i].idcommande][-1]
+                            self.dict_box_commande[elem][i].id = self.box_commande[self.dict_box_commande[elem][i].idcommande][-1].type.id
+                            self.dict_box_commande[elem][i].box.remplir_nouvelle_pile(self.dict_box_commande[elem][i])
+                            self.dict_box_commande[elem][i].box.commande = self.dict_box_commande[elem][i].commande
+                # elif len(self.boxachetes) != 0:
+                #     print("hhh")
+                #     for k in range(len(self.boxachetes)):
+                #         if self.boxachetes[k].est_vide() == True:
+                #             print("hhhh")
+                #             if self.dict_box_commande[elem][i].produit.longueur < self.boxachetes[k].type.l3 and self.dict_box_commande[elem][i].produit.hauteur < self.boxachetes[k].type.h3:
+                #                 self.boxachetes[k].commande = self.dict_box_commande[elem][i].commande
+                #                 self.dict_box_commande[elem][i].box = self.boxachetes[k]
+                #                 self.dict_box_commande[elem][i].identifiant_box = self.boxachetes[k].type.id
+                #                 self.dict_box_commande[elem][i].box.remplir_nouvelle_pile(self.dict_box_commande[elem][i])
+                #                 self.box_commande[self.dict_box_commande[elem][i].identifiant_commande].append(self.boxachetes[k])
+
+                if len(self.boxachetes) == 0 or len(self.box_commande[self.dict_box_commande[elem][i].idcommande]) == 0:
+                #else:    
+                    j = 0
+                    while self.dict_box_commande[elem][i].produit.l > self.type_de_box[j].l and self.dict_box_commande[elem][i].produit.h > self.type_de_box[j].h:
+                        j = j + 1
+                    if j < len(self.type_de_box):
+                        B = self.acheter_box(self.type_de_box[j])
+                        addEval += self.type_de_box[j].prix
+                        self.dict_box_commande[elem][i].box = B
+                        self.dict_box_commande[elem][i].id = B.type.id
+                        B.remplir_nouvelle_pile(self.dict_box_commande[elem][i])
+                        self.dict_box_commande[elem][i].box.commande = self.dict_box_commande[elem][i].commande
+                        self.box_commande[self.dict_box_commande[elem][i].idcommande].append(B)
+                # if i < len(self.box_commande[self.dict_box_commande[elem][i].identifiant_commande]) - 1 and self.box_commande[self.dict_box_commande[elem][i].identifiant_commande][-1].empiler(
+                #         self.dict_box_commande[elem][i],
+                #         self.box_commande[self.dict_box_commande[elem][i].identifiant_commande][-1].piles[self.indice]) == False:
+                #     print("c")
+                #     self.box_commande[self.dict_box_commande[elem][i].identifiant_commande][-1].time = datetime.now()
+                # for elem3 in self.box_commande.keys():
+                #     for i in range(len(self.box_commande[elem3])):
+                #         print("j")
+                #         if self.box_commande[elem3][i].time >= self.box_commande[elem3][i].commande.temps_qualite and self.box_commande[elem3][i].time == self.box_commande[elem3][i].commande.date_envoi:
+                #             self.box_commande[elem3].remove(self.box_commande[elem3][i])
+                #             print("ll")
+        self.eval += addEval
+            
+    def print_results(self, filename):
+        listCommandes = self.orders
+        listProducedUnities = self.listProducedUnities
+        listProducedComponents = self.components_produced
+        listBoxes=self.type_de_box
+        eval = self.eval
+
+        with open(filename, 'w') as file:
+            file.write(f"{eval}\n")
+
+            for box in listBoxes:
+                file.write(f"{box.id} {box.nb_achatbox}\n")
+
+            for commande in listCommandes:
+                print("YOU HAVE TO START STOCKING",commande.id, "AT", commande.ddemande_box)
+                print("YOU FINISH STOCKING",commande.id, "AT", commande.date_envoi)
+                file.write(f"{commande.id} {commande.date_envoi}\n")
+
+            for ProducedUnity in listProducedUnities:
+                if ProducedUnity.box:  # Check if box is not None
+                    file.write(f"{ProducedUnity.idcommande} {ProducedUnity.idTypeProduit} {ProducedUnity.index} {ProducedUnity.ddebut} {ProducedUnity.box.type.id} {ProducedUnity.box.nombre_achats_box} {' '.join(ProducedUnity.idcomposant)}\n")
+
+            for ProducedComponent in listProducedComponents:
+                file.write(f"{ProducedComponent.idcomposant} {ProducedComponent.idtype} {ProducedComponent.idligne} {ProducedComponent.ddebut}\n")
+              
+
+
+        
+# Main
 if __name__ == "__main__":
-    main()
+    factory_simulation = FactorySimulation("InstanceA.csv", "instanceA.json")
+    factory_simulation.run_simulation_production()
+    factory_simulation.stockage_unite()
+    factory_simulation.print_results("instanceA.sol")
