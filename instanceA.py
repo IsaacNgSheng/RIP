@@ -38,14 +38,6 @@ class Pile:
     def __str__(self):
         return f"Pile(nombre={self.nombre}, produit={self.produit})"
 
-class LigneProduction:
-    def __init__(self, id, operation, esi, index, dernier=None, timer=None):
-        self.id = id
-        self.operation = operation
-        self.esi = esi
-        self.index = index
-        self.dernier = ""
-        self.timer = 0
 
     def __str__(self):
         return f"LigneProduction(id={self.id}, operation={self.operation}, esi={self.esi})"
@@ -127,83 +119,17 @@ class TypeBox:
         return f"TypeBox(id={self.id}, h={self.h}, l={self.l}, prix={self.prix})"
 
 class TypesLigne:
-    def __init__(self, identifiant, types_operation, stock_esi, index, dernier=None, timer=None):
-        self.identifiant = identifiant
-        self.types_operation = types_operation
-        self.stock_esi = stock_esi
+    def __init__(self, id, operation, esi, index, dernier=None, timer=None):
+        self.identifiant = id
+        self.types_operation = operation
+        self.stock_esi = esi
         self.index = index
         self.dernier = ""
         self.timer = 0
 
-class Lignes_de_Production:
-    def __init__(self, id, esi, current_storage=0):
-        self.id = id
-        self.esi = esi
-        self.current_storage = current_storage
-        self.composant = None
-        self.produit = 0
-        self.current_time = 0
-        self.materials = {"verre": 0, "membrane": 0, "eva": 0, "cell_A": 0, "cell_B": 0}
 
     def __str__(self):
         return f"Lignes_de_Production(id={self.id}, operation={self.operation}, esi={self.esi}, current_storage={self.current_storage})"
-
-    def fabrication(self, composant):
-        datedebut=0
-        self.composant = composant
-        self.current_time += self.composant.s
-        print(f"temps de setup : {self.composant.s}, current time: {self.current_time}")
-        self.current_time += self.composant.t
-        print(f"temps de fabrication (par unité) : {self.composant.t}, current time: {self.current_time}")
-        return (self.current_time, datedebut)
-
-    def decoupe(self, composant):
-        self.composant = composant
-        self.current_time += self.composant.s
-        print(f"temps setup : {self.composant.s}, current time: {self.current_time}")
-        self.current_time += self.composant.t
-        print(f"temps de decoupe (par unité) : {self.composant.t}, current time: {self.current_time}")
-        return self.current_time
-
-    def assemblage(self, produit:list, commandes):
-        datedebut = 0
-        curr_time = 0
-        self.produit = produit
-        PA = commandes[0].nb
-        PB = commandes[1].nb
-        while PA > 0:
-            self.current_time += self.composant.s
-            self.current_time += self.composant.p
-            self.materials["verre"] += 1
-            self.materials["membrane"] += 1
-            self.materials["eva"] += 2
-            self.materials["cell_A"] += 1
-            PA -= 1
-        while PB > 0:
-            self.current_time += self.composant.s
-            self.current_time += self.composant.p
-            self.materials["verre"] += 1
-            self.materials["membrane"] += 1
-            self.materials["eva"] += 2
-            self.materials["cell_B"] += 1
-            PB -= 1
-        for item in self.materials.items():
-            if item[1] > 0:
-                if item[0] == 'verre' or item[0] == 'membrane' or item[0] == 'eva':
-                    curr_time = self.decoupe(item[0])
-                elif item[0] == 'cell_A' or item[0] == 'cell_B':
-                    curr_time = self.fabrication(item[0])
-            if item[0] == 'verre' and item[1] > 5:
-                datedebut_verre = curr_time
-            if item[0] == 'membrane' and item[1] > 5:
-                datedebut_membrane = curr_time
-            if item[0] == 'eva' and item[1] > 5:
-                datedebut_eva = curr_time
-            if item[0] == 'cell_A' and item[1] > 5:
-                datedebut_cellA = curr_time
-            if item[0] == 'cell_B' and item[1] > 5:
-                datedebut_cellB = curr_time
-        return self.current_time
 
 class Stockage:
     def __init__(self):
@@ -221,7 +147,7 @@ class Stockage:
                 self.boxes.append({"id": id, "num": self.types_box[id]["nb_achetes"]})
                 self.nb_total_achetes += nb_achetes 
 
-    def dEnvoie(dEnvoiPrevue, ligne_product:Lignes_de_Production):
+    def dEnvoie(dEnvoiPrevue, ligne_product:TypesLigne):
         assem_time = ligne_product.assemblage()
         if assem_time < dEnvoiPrevue:
             return dEnvoiPrevue 
