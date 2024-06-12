@@ -1,18 +1,23 @@
-Evaluation solution = 30960
-BOX = B1 et nombre de box achetés = 1
-BOX = B2 et nombre de box achetés = 1
-COMMANDE = C1 et date d'envoie = 2995
-COMMANDE = C2 et date d'envoie = 2995
- Id commande = C1 Type = B2 Num ligne = 1 Date debut prod = 3000 Box id = B1 Num box = 1 Composants = O4 O3 O3 O1 O2
- Id commande = C2 Type = B1 Num ligne = 2 Date debut prod = 3000 Box id = B2 Num box = 1 Composants = O4 O3 O3 O1 O2
- Id commande = C2 Type = B2 Num ligne = 3 Date debut prod = 3000 Box id = B1 Num box = 1 Composants = O4 O3 O3 O1 O2
-Id = O1 Type = verre Num ligne = 1
- Date envoi prevue: 2024-06-03 00:46:47.699056
-Id = O2 Type = membrane Num ligne = 2
- Date envoi prevue: 2024-06-03 00:46:47.699056
-Id = O3 Type = eva Num ligne = 3
- Date envoi prevue: 2024-06-03 00:46:47.699056
-Id = O4 Type = cellules Num ligne = 1
- Date envoi prevue: 2024-06-03 00:46:47.699056
-Id = O5 Type =  cellules Num ligne = 2
- Date envoi prevue: 2024-06-03 00:36:47.699056
+2000
+B1 2
+B2 0
+C2 1500
+C1 3000
+C2 PA 3 500 B1 1 1 2 3 4 5
+C2 PB 3 980 B1 1 6 7 8 9 10
+C1 PB 3 1220 B1 2 11 12 13 14 15
+1 O4 1 10
+2 O3 2 20
+3 O3 2 40
+4 O1 2 80
+5 O2 2 120
+6 O5 1 45
+7 O3 2 160
+8 O3 2 180
+9 O1 2 220
+10 O2 2 260
+11 O5 1 70
+12 O3 2 300
+13 O3 2 320
+14 O1 2 360
+15 O2 2 400

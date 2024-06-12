@@ -38,14 +38,6 @@ class Pile:
     def __str__(self):
         return f"Pile(nombre={self.nombre}, produit={self.produit})"
 
-class LigneProduction:
-    def __init__(self, id, operation, esi, index, dernier=None, timer=None):
-        self.id = id
-        self.operation = operation
-        self.esi = esi
-        self.index = index
-        self.dernier = ""
-        self.timer = 0
 
     def __str__(self):
         return f"LigneProduction(id={self.id}, operation={self.operation}, esi={self.esi})"
@@ -127,83 +119,17 @@ class TypeBox:
         return f"TypeBox(id={self.id}, h={self.h}, l={self.l}, prix={self.prix})"
 
 class TypesLigne:
-    def __init__(self, identifiant, types_operation, stock_esi, index, dernier=None, timer=None):
-        self.identifiant = identifiant
-        self.types_operation = types_operation
-        self.stock_esi = stock_esi
+    def __init__(self, id, operation, esi, index, dernier=None, timer=None):
+        self.identifiant = id
+        self.types_operation = operation
+        self.stock_esi = esi
         self.index = index
         self.dernier = ""
         self.timer = 0
 
-class Lignes_de_Production:
-    def __init__(self, id, esi, current_storage=0):
-        self.id = id
-        self.esi = esi
-        self.current_storage = current_storage
-        self.composant = None
-        self.produit = 0
-        self.current_time = 0
-        self.materials = {"verre": 0, "membrane": 0, "eva": 0, "cell_A": 0, "cell_B": 0}
 
     def __str__(self):
         return f"Lignes_de_Production(id={self.id}, operation={self.operation}, esi={self.esi}, current_storage={self.current_storage})"
-
-    def fabrication(self, composant):
-        datedebut=0
-        self.composant = composant
-        self.current_time += self.composant.s
-        print(f"temps de setup : {self.composant.s}, current time: {self.current_time}")
-        self.current_time += self.composant.t
-        print(f"temps de fabrication (par unité) : {self.composant.t}, current time: {self.current_time}")
-        return (self.current_time, datedebut)
-
-    def decoupe(self, composant):
-        self.composant = composant
-        self.current_time += self.composant.s
-        print(f"temps setup : {self.composant.s}, current time: {self.current_time}")
-        self.current_time += self.composant.t
-        print(f"temps de decoupe (par unité) : {self.composant.t}, current time: {self.current_time}")
-        return self.current_time
-
-    def assemblage(self, produit:list, commandes):
-        datedebut = 0
-        curr_time = 0
-        self.produit = produit
-        PA = commandes[0].nb
-        PB = commandes[1].nb
-        while PA > 0:
-            self.current_time += self.composant.s
-            self.current_time += self.composant.p
-            self.materials["verre"] += 1
-            self.materials["membrane"] += 1
-            self.materials["eva"] += 2
-            self.materials["cell_A"] += 1
-            PA -= 1
-        while PB > 0:
-            self.current_time += self.composant.s
-            self.current_time += self.composant.p
-            self.materials["verre"] += 1
-            self.materials["membrane"] += 1
-            self.materials["eva"] += 2
-            self.materials["cell_B"] += 1
-            PB -= 1
-        for item in self.materials.items():
-            if item[1] > 0:
-                if item[0] == 'verre' or item[0] == 'membrane' or item[0] == 'eva':
-                    curr_time = self.decoupe(item[0])
-                elif item[0] == 'cell_A' or item[0] == 'cell_B':
-                    curr_time = self.fabrication(item[0])
-            if item[0] == 'verre' and item[1] > 5:
-                datedebut_verre = curr_time
-            if item[0] == 'membrane' and item[1] > 5:
-                datedebut_membrane = curr_time
-            if item[0] == 'eva' and item[1] > 5:
-                datedebut_eva = curr_time
-            if item[0] == 'cell_A' and item[1] > 5:
-                datedebut_cellA = curr_time
-            if item[0] == 'cell_B' and item[1] > 5:
-                datedebut_cellB = curr_time
-        return self.current_time
 
 class Stockage:
     def __init__(self):
@@ -221,19 +147,12 @@ class Stockage:
                 self.boxes.append({"id": id, "num": self.types_box[id]["nb_achetes"]})
                 self.nb_total_achetes += nb_achetes 
 
-    def dEnvoie(dEnvoiPrevue, ligne_product:Lignes_de_Production):
+    def dEnvoie(dEnvoiPrevue, ligne_product:TypesLigne):
         assem_time = ligne_product.assemblage()
         if assem_time < dEnvoiPrevue:
             return dEnvoiPrevue 
         else :
             return ligne_product
-        '''
-        if assem_time > dEnvoiPrevue:
-            delay = assem_time - dEnvoiPrevue
-        else:
-            timebox = dEnvoiPrevue - assem_time
-        '''
-        
 
 
     def __str__(self):
@@ -410,23 +329,18 @@ class FactorySimulation:
                     #print("produced")
                     
                     verre = next((Component for Component in listComposants if Component.m == "verre" and Component.h == Product.h and Component.l == Product.l), None)
-                    #print(verre.identifiant)
                     
                     membrane = next((Component for Component in listComposants if Component.m == "membrane" and Component.h == Product.h and Component.l == Product.l), None)
-                    #print(membrane.identifiant)
                     
                     eva = next((Component for Component in listComposants if Component.m == "eva" and Component.h == Product.h and Component.l == Product.l), None)
-                    #print(eva.identifiant)
                     
                     cellules = next((Component for Component in listComposants if Product.w == Component.w), None)
-                    #print(cellules.identifiant)
                     
                     components_tobe_produced = [eva, eva, verre,membrane]
                     
                     lines_production = [ Line for Line in listLignes if Line.types_operation == "production" ]
                     lines_production_notfull = [ Line for Line in lines_production if Line.stock_esi > 0 ]
                     line_production_notfull_balancingload = max(lines_production_notfull, key=lambda Line: Line.stock_esi)
-                    #print(line_production_notfull_balancingload.identifiant)
                     
                     lines_used = []
                     lines_used.append(line_production_notfull_balancingload)
@@ -447,7 +361,7 @@ class FactorySimulation:
                             line_production_notfull_balancingload.timer
                         )
 
-                    # Aggiunta dell'oggetto alla lista
+
                     self.components_produced.append(nouvelle_componant)
                     
                     line_production_notfull_balancingload.timer = line_production_notfull_balancingload.timer + cellules.t 
@@ -455,14 +369,11 @@ class FactorySimulation:
                     line_production_notfull_balancingload.dernier = cellules.id
                     
                     line_production_notfull_balancingload.stock_esi = line_production_notfull_balancingload.stock_esi - Commande.quantite[i]
-                    #print(line_production_notfull_balancingload.timer)
-                    #print(line_production_notfull_balancingload.stock_esi)
                     
                     for Component in components_tobe_produced:
                         lines_decoupe = [ Line for Line in listLignes if Line.types_operation == "decoupe" ]
                         lines_decoupe_notfull = [ Line for Line in lines_decoupe if Line.stock_esi > 0 ]
                         line_decoupe_notfull_balancingload = max(lines_decoupe_notfull, key=lambda Line: Line.stock_esi)
-                        #print(line_decoupe_notfull_balancingload.identifiant)
                         
                         lines_used.append(line_decoupe_notfull_balancingload)
                         
@@ -477,7 +388,6 @@ class FactorySimulation:
                             line_decoupe_notfull_balancingload.timer
                         )
 
-                        # Aggiunta dell'oggetto alla lista
                         self.components_produced.append(nouvelle_componant)
                         
                         line_decoupe_notfull_balancingload.timer = line_decoupe_notfull_balancingload.timer + Component.t
@@ -487,8 +397,6 @@ class FactorySimulation:
                         line_decoupe_notfull_balancingload.dernier = Component.id
                         
                         line_decoupe_notfull_balancingload.stock_esi = line_decoupe_notfull_balancingload.stock_esi - Commande.quantite[i]
-                        #print(line_decoupe_notfull_balancingload.timer)
-                        #print(line_decoupe_notfull_balancingload.stock_esi)
                           
                     
                     line_finishing_the_latest = max(lines_used, key=lambda Line: Line.timer)
@@ -518,9 +426,7 @@ class FactorySimulation:
                         )
                     
             
-        
-                    #print([verre.identifiant,membrane.identifiant,eva.identifiant,cellules.identifiant])
-                    # Aggiunta dell'oggetto alla lista
+    
                     self.listProducedUnities.append(nouvelle_unite)
                     line_assemblage_balancingload.timer = line_assemblage_balancingload.timer + Commande.quantite[i]*Product.p #rimuovi setup quando non serve
                         
@@ -602,17 +508,6 @@ class FactorySimulation:
                             self.dict_box_commande[elem][i].id = self.box_commande[self.dict_box_commande[elem][i].idcommande][-1].type.id
                             self.dict_box_commande[elem][i].box.remplir_nouvelle_pile(self.dict_box_commande[elem][i])
                             self.dict_box_commande[elem][i].box.commande = self.dict_box_commande[elem][i].commande
-                # elif len(self.boxachetes) != 0:
-                #     print("hhh")
-                #     for k in range(len(self.boxachetes)):
-                #         if self.boxachetes[k].est_vide() == True:
-                #             print("hhhh")
-                #             if self.dict_box_commande[elem][i].produit.longueur < self.boxachetes[k].type.l3 and self.dict_box_commande[elem][i].produit.hauteur < self.boxachetes[k].type.h3:
-                #                 self.boxachetes[k].commande = self.dict_box_commande[elem][i].commande
-                #                 self.dict_box_commande[elem][i].box = self.boxachetes[k]
-                #                 self.dict_box_commande[elem][i].identifiant_box = self.boxachetes[k].type.id
-                #                 self.dict_box_commande[elem][i].box.remplir_nouvelle_pile(self.dict_box_commande[elem][i])
-                #                 self.box_commande[self.dict_box_commande[elem][i].identifiant_commande].append(self.boxachetes[k])
 
                 if len(self.boxachetes) == 0 or len(self.box_commande[self.dict_box_commande[elem][i].idcommande]) == 0:
                 #else:    
@@ -627,17 +522,7 @@ class FactorySimulation:
                         B.remplir_nouvelle_pile(self.dict_box_commande[elem][i])
                         self.dict_box_commande[elem][i].box.commande = self.dict_box_commande[elem][i].commande
                         self.box_commande[self.dict_box_commande[elem][i].idcommande].append(B)
-                # if i < len(self.box_commande[self.dict_box_commande[elem][i].identifiant_commande]) - 1 and self.box_commande[self.dict_box_commande[elem][i].identifiant_commande][-1].empiler(
-                #         self.dict_box_commande[elem][i],
-                #         self.box_commande[self.dict_box_commande[elem][i].identifiant_commande][-1].piles[self.indice]) == False:
-                #     print("c")
-                #     self.box_commande[self.dict_box_commande[elem][i].identifiant_commande][-1].time = datetime.now()
-                # for elem3 in self.box_commande.keys():
-                #     for i in range(len(self.box_commande[elem3])):
-                #         print("j")
-                #         if self.box_commande[elem3][i].time >= self.box_commande[elem3][i].commande.temps_qualite and self.box_commande[elem3][i].time == self.box_commande[elem3][i].commande.date_envoi:
-                #             self.box_commande[elem3].remove(self.box_commande[elem3][i])
-                #             print("ll")
+
         self.eval += addEval
             
     def print_results(self, filename):
@@ -665,8 +550,6 @@ class FactorySimulation:
             for ProducedComponent in listProducedComponents:
                 file.write(f"{ProducedComponent.idcomposant} {ProducedComponent.idtype} {ProducedComponent.idligne} {ProducedComponent.ddebut}\n")
               
-
-
         
 # Main
 if __name__ == "__main__":
