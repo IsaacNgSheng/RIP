@@ -227,13 +227,6 @@ class Stockage:
             return dEnvoiPrevue 
         else :
             return ligne_product
-        '''
-        if assem_time > dEnvoiPrevue:
-            delay = assem_time - dEnvoiPrevue
-        else:
-            timebox = dEnvoiPrevue - assem_time
-        '''
-        
 
 
     def __str__(self):
@@ -410,23 +403,18 @@ class FactorySimulation:
                     #print("produced")
                     
                     verre = next((Component for Component in listComposants if Component.m == "verre" and Component.h == Product.h and Component.l == Product.l), None)
-                    #print(verre.identifiant)
                     
                     membrane = next((Component for Component in listComposants if Component.m == "membrane" and Component.h == Product.h and Component.l == Product.l), None)
-                    #print(membrane.identifiant)
                     
                     eva = next((Component for Component in listComposants if Component.m == "eva" and Component.h == Product.h and Component.l == Product.l), None)
-                    #print(eva.identifiant)
                     
                     cellules = next((Component for Component in listComposants if Product.w == Component.w), None)
-                    #print(cellules.identifiant)
                     
                     components_tobe_produced = [eva, eva, verre,membrane]
                     
                     lines_production = [ Line for Line in listLignes if Line.types_operation == "production" ]
                     lines_production_notfull = [ Line for Line in lines_production if Line.stock_esi > 0 ]
                     line_production_notfull_balancingload = max(lines_production_notfull, key=lambda Line: Line.stock_esi)
-                    #print(line_production_notfull_balancingload.identifiant)
                     
                     lines_used = []
                     lines_used.append(line_production_notfull_balancingload)
@@ -447,7 +435,7 @@ class FactorySimulation:
                             line_production_notfull_balancingload.timer
                         )
 
-                    # Aggiunta dell'oggetto alla lista
+
                     self.components_produced.append(nouvelle_componant)
                     
                     line_production_notfull_balancingload.timer = line_production_notfull_balancingload.timer + cellules.t 
@@ -455,14 +443,11 @@ class FactorySimulation:
                     line_production_notfull_balancingload.dernier = cellules.id
                     
                     line_production_notfull_balancingload.stock_esi = line_production_notfull_balancingload.stock_esi - Commande.quantite[i]
-                    #print(line_production_notfull_balancingload.timer)
-                    #print(line_production_notfull_balancingload.stock_esi)
                     
                     for Component in components_tobe_produced:
                         lines_decoupe = [ Line for Line in listLignes if Line.types_operation == "decoupe" ]
                         lines_decoupe_notfull = [ Line for Line in lines_decoupe if Line.stock_esi > 0 ]
                         line_decoupe_notfull_balancingload = max(lines_decoupe_notfull, key=lambda Line: Line.stock_esi)
-                        #print(line_decoupe_notfull_balancingload.identifiant)
                         
                         lines_used.append(line_decoupe_notfull_balancingload)
                         
@@ -477,7 +462,6 @@ class FactorySimulation:
                             line_decoupe_notfull_balancingload.timer
                         )
 
-                        # Aggiunta dell'oggetto alla lista
                         self.components_produced.append(nouvelle_componant)
                         
                         line_decoupe_notfull_balancingload.timer = line_decoupe_notfull_balancingload.timer + Component.t
@@ -487,8 +471,6 @@ class FactorySimulation:
                         line_decoupe_notfull_balancingload.dernier = Component.id
                         
                         line_decoupe_notfull_balancingload.stock_esi = line_decoupe_notfull_balancingload.stock_esi - Commande.quantite[i]
-                        #print(line_decoupe_notfull_balancingload.timer)
-                        #print(line_decoupe_notfull_balancingload.stock_esi)
                           
                     
                     line_finishing_the_latest = max(lines_used, key=lambda Line: Line.timer)
@@ -518,9 +500,7 @@ class FactorySimulation:
                         )
                     
             
-        
-                    #print([verre.identifiant,membrane.identifiant,eva.identifiant,cellules.identifiant])
-                    # Aggiunta dell'oggetto alla lista
+    
                     self.listProducedUnities.append(nouvelle_unite)
                     line_assemblage_balancingload.timer = line_assemblage_balancingload.timer + Commande.quantite[i]*Product.p #rimuovi setup quando non serve
                         
@@ -602,17 +582,6 @@ class FactorySimulation:
                             self.dict_box_commande[elem][i].id = self.box_commande[self.dict_box_commande[elem][i].idcommande][-1].type.id
                             self.dict_box_commande[elem][i].box.remplir_nouvelle_pile(self.dict_box_commande[elem][i])
                             self.dict_box_commande[elem][i].box.commande = self.dict_box_commande[elem][i].commande
-                # elif len(self.boxachetes) != 0:
-                #     print("hhh")
-                #     for k in range(len(self.boxachetes)):
-                #         if self.boxachetes[k].est_vide() == True:
-                #             print("hhhh")
-                #             if self.dict_box_commande[elem][i].produit.longueur < self.boxachetes[k].type.l3 and self.dict_box_commande[elem][i].produit.hauteur < self.boxachetes[k].type.h3:
-                #                 self.boxachetes[k].commande = self.dict_box_commande[elem][i].commande
-                #                 self.dict_box_commande[elem][i].box = self.boxachetes[k]
-                #                 self.dict_box_commande[elem][i].identifiant_box = self.boxachetes[k].type.id
-                #                 self.dict_box_commande[elem][i].box.remplir_nouvelle_pile(self.dict_box_commande[elem][i])
-                #                 self.box_commande[self.dict_box_commande[elem][i].identifiant_commande].append(self.boxachetes[k])
 
                 if len(self.boxachetes) == 0 or len(self.box_commande[self.dict_box_commande[elem][i].idcommande]) == 0:
                 #else:    
@@ -627,17 +596,7 @@ class FactorySimulation:
                         B.remplir_nouvelle_pile(self.dict_box_commande[elem][i])
                         self.dict_box_commande[elem][i].box.commande = self.dict_box_commande[elem][i].commande
                         self.box_commande[self.dict_box_commande[elem][i].idcommande].append(B)
-                # if i < len(self.box_commande[self.dict_box_commande[elem][i].identifiant_commande]) - 1 and self.box_commande[self.dict_box_commande[elem][i].identifiant_commande][-1].empiler(
-                #         self.dict_box_commande[elem][i],
-                #         self.box_commande[self.dict_box_commande[elem][i].identifiant_commande][-1].piles[self.indice]) == False:
-                #     print("c")
-                #     self.box_commande[self.dict_box_commande[elem][i].identifiant_commande][-1].time = datetime.now()
-                # for elem3 in self.box_commande.keys():
-                #     for i in range(len(self.box_commande[elem3])):
-                #         print("j")
-                #         if self.box_commande[elem3][i].time >= self.box_commande[elem3][i].commande.temps_qualite and self.box_commande[elem3][i].time == self.box_commande[elem3][i].commande.date_envoi:
-                #             self.box_commande[elem3].remove(self.box_commande[elem3][i])
-                #             print("ll")
+
         self.eval += addEval
             
     def print_results(self, filename):
@@ -665,8 +624,6 @@ class FactorySimulation:
             for ProducedComponent in listProducedComponents:
                 file.write(f"{ProducedComponent.idcomposant} {ProducedComponent.idtype} {ProducedComponent.idligne} {ProducedComponent.ddebut}\n")
               
-
-
         
 # Main
 if __name__ == "__main__":
