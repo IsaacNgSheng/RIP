@@ -1,0 +1,107 @@
+{
+    "lignes": [
+        {
+            "id": 1,
+            "operation": "production",
+            "esi": 500
+        },
+        {
+            "id": 2,
+            "operation": "production",
+            "esi": 500
+        },
+        {
+            "id": 3,
+            "operation": "decoupe",
+            "esi": 500
+        },
+        {
+            "id": 4,
+            "operation": "assemblage",
+            "esi": 0
+        },
+        {
+            "id": 5,
+            "operation": "assemblage",
+            "esi": 0
+        }
+    ],
+    "types_composants": [
+        {
+            "id": "O1",
+            "m": "verre",
+            "s": 10,
+            "t": 20,
+            "h": 100,
+            "l": 170
+        },
+        {
+            "id": "O2",
+            "m": "membrane",
+            "s": 10,
+            "t": 40,
+            "h": 100,
+            "l": 170
+        },
+        {
+            "id": "O3",
+            "m": "eva",
+            "s": 10,
+            "t": 55,
+            "h": 100,
+            "l": 170
+        },
+        {
+            "id": "O4",
+            "m": "cellules",
+            "s": 10,
+            "t": 60,
+            "h": 100,
+            "l": 170,
+            "w": 375
+        },
+        {
+            "id": "O5",
+            "m": " cellules",
+            "s": 15,
+            "t": 70,
+            "h": 100,
+            "l": 170,
+            "w": 400
+        }
+    ],
+    "types_produits": [
+        {
+            "id": "PA",
+            "s": 120,
+            "p": 360,
+            "h": 100,
+            "l": 170,
+            "w": 375,
+            "nbEmpileMax": 20
+        },
+        {
+            "id": "PB",
+            "s": 200,
+            "p": 400,
+            "h": 100,
+            "l": 170,
+            "w": 400,
+            "nbEmpileMax": 10
+        }
+    ],
+    "types_box": [
+        {
+            "id": "B1",
+            "h": 850,
+            "l": 180,
+            "prix": 1000
+        },
+        {
+            "id": "B2",
+            "h": 950,
+            "l": 400,
+            "prix": 1900
+        }
+    ]
+}
