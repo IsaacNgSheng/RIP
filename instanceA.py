@@ -296,7 +296,7 @@ class box:
     def remplirPile(self,unite,p) :  
         self.contenu_box.append(unite) 
         self.commande = unite.commande #associe unité à une commande 
-        p.hauteur += unite.produit.h2 #mise à jour pile
+        p.hauteur += unite.produit.h #mise à jour pile
                 
     def remplir_nouvelle_pile(self,unite) : # créer une nouvelle pile
         if (self.long_res - unite.produit.l>=0) : #
@@ -322,11 +322,11 @@ class box:
 class FactorySimulation:
     def __init__(self, file_CSV, file_JSON):
         self.type_box = {}
-        self.components = self.load_components(file_JSON)
-        self.products = self.load_products(file_JSON)
-        self.orders = self.load_orders(file_CSV)
-        self.production_lines = self.load_production_lines(file_JSON)
-        self.type_de_box = self.load_storage_boxes(file_JSON)
+        self.components = self.ajout_composant(file_JSON)
+        self.products = self.ajout_produit(file_JSON)
+        self.orders = self.ajout_commande(file_CSV)
+        self.production_lines = self.ajout_ligneprod(file_JSON)
+        self.type_de_box = self.ajout_stock(file_JSON)
         self.boxachetes = []
         self.unities_produced = []
         self.components_produced = []
@@ -342,19 +342,19 @@ class FactorySimulation:
         self.orders.sort(key=lambda order: order.date_envoiPrevue)
         
 
-    def load_components(self, file_path):
+    def ajout_composant(self, file_path):
         with open(file_path, 'r') as file:
             data = json.load(file)
             listComposants = [TypeComposant(tc["id"], tc["m"], tc["s"], tc["t"], tc["h"], tc["l"], tc.get("w")) for tc in data["types_composants"]]
             return listComposants
 
-    def load_products(self, file_path):
+    def ajout_produit(self, file_path):
         with open(file_path, 'r') as file:
             data = json.load(file)
             listTypesProduits = [TypeProduit(tp["id"], tp["s"], tp["p"], tp["h"], tp["l"], tp["w"], tp["nbEmpileMax"]) for tp in data["types_produits"]]
             return listTypesProduits
 
-    def load_orders(self, file_path):
+    def ajout_commande(self, file_path):
         with open(file_path, 'r') as file:
             csv_reader = csv.reader(file, delimiter=' ')
             
@@ -373,13 +373,13 @@ class FactorySimulation:
                 listCommandes.append(oneCommande)
             return listCommandes
 
-    def load_production_lines(self, file_path):
+    def ajout_ligneprod(self, file_path):
         with open(file_path, 'r') as file:
             data = json.load(file)
             listLignes = [types_lignes(l["id"], l["operation"], l["esi"], index + 1) for index, l in enumerate(data["lignes"])]
             return listLignes
     
-    def load_storage_boxes(self, file_path):
+    def ajout_stock(self, file_path):
         with open(file_path, 'r') as file:
             data = json.load(file)
             listTypesBox = [types_box(tb["id"], tb["h"], tb["l"], tb["prix"]) for tb in data["types_box"]]
@@ -403,101 +403,100 @@ class FactorySimulation:
                 if Commande.nombre_unite[i] == 0:
                     pass
                 else:
-                    verre = next((Component for Component in listComposants if Component.m == "verre" and Component.h == Product.h and Component.l == Product.l), None)
+                    for j in range(0,Commande.nombre_unite[i]):
+                        verre = next((Component for Component in listComposants if Component.m == "verre" and Component.h == Product.h and Component.l == Product.l), None)
 
-                    membrane = next((Component for Component in listComposants if Component.m == "membrane" and Component.h == Product.h and Component.l == Product.l), None)
-                    
-                    eva = next((Component for Component in listComposants if Component.m == "eva" and Component.h == Product.h and Component.l == Product.l), None)
-                    
-                    cellules = next((Component for Component in listComposants if Product.w == Component.w), None)
+                        membrane = next((Component for Component in listComposants if Component.m == "membrane" and Component.h == Product.h and Component.l == Product.l), None)
+                        
+                        eva = next((Component for Component in listComposants if Component.m == "eva" and Component.h == Product.h and Component.l == Product.l), None)
+                        
+                        cellules = next((Component for Component in listComposants if Product.w == Component.w), None)
 
-                    components_tobe_produced = [eva, eva, verre, membrane]
-                    
-                    lines_production = [ Line for Line in listLignes if Line.types_operation == "production" ]
-                    lines_production_notfull = [ Line for Line in lines_production if Line.stock_esi > 0 ]
-                    line_production_notfull_balancingload = max(lines_production_notfull, key=lambda Line: Line.stock_esi)
-                    
-                    lines_used = []
-                    lines_used.append(line_production_notfull_balancingload)
+                        components_tobe_produced = [eva, eva, verre, membrane]
+                        
+                        lines_production = [ Line for Line in listLignes if Line.types_operation == "production" ]
+                        lines_production_notfull = [ Line for Line in lines_production if Line.stock_esi > 0 ]
+                        line_production_notfull_balancingload = max(lines_production_notfull, key=lambda Line: Line.stock_esi)
+                        
+                        lines_used = []
+                        lines_used.append(line_production_notfull_balancingload)
 
-                    if line_production_notfull_balancingload.dernier != cellules.id:
-                        line_production_notfull_balancingload.set_time = line_production_notfull_balancingload.set_time + cellules.s
-                        
-                    nouvelle_componant = composant_produit(
-                            len(self.components_produced) + 1,
-                            cellules.id,
-                            cellules.m,
-                            line_production_notfull_balancingload.index,
-                            line_production_notfull_balancingload.set_time
-                        )
-
-                    # Aggiunta dell'oggetto alla lista
-                    self.components_produced.append(nouvelle_componant)
-                    
-                    line_production_notfull_balancingload.set_time = line_production_notfull_balancingload.set_time + cellules.t 
-                      
-                    line_production_notfull_balancingload.dernier = cellules.id
-                    
-                    line_production_notfull_balancingload.stock_esi = line_production_notfull_balancingload.stock_esi - Commande.nombre_unite[i]
-                    
-                    for Component in components_tobe_produced:
-                        lines_decoupe = [Line for Line in listLignes if Line.types_operation == "decoupe"]
-                        lines_decoupe_notfull = [Line for Line in lines_decoupe if Line.stock_esi > 0]
-                        line_decoupe_notfull_balancingload = max(lines_decoupe_notfull, key=lambda Line: Line.stock_esi)
-                        
-                        lines_used.append(line_decoupe_notfull_balancingload)
-                        
-                        if line_decoupe_notfull_balancingload.dernier != Component.id:
-                            line_decoupe_notfull_balancingload.set_time = line_decoupe_notfull_balancingload.set_time + Component.s
-                        
+                        if line_production_notfull_balancingload.dernier != cellules.id:
+                            line_production_notfull_balancingload.set_time = line_production_notfull_balancingload.set_time + cellules.s
+                            
                         nouvelle_componant = composant_produit(
-                            len(self.components_produced) + 1,
-                            Component.id,
-                            Component.m,
-                            line_decoupe_notfull_balancingload.index,
-                            line_decoupe_notfull_balancingload.set_time
-                        )
+                                len(self.components_produced) + 1,
+                                cellules.id,
+                                cellules.m,
+                                line_production_notfull_balancingload.index,
+                                line_production_notfull_balancingload.set_time
+                            )
 
-                        # Aggiunta dell'oggetto alla lista
                         self.components_produced.append(nouvelle_componant)
                         
-                        line_decoupe_notfull_balancingload.set_time = line_decoupe_notfull_balancingload.set_time + Component.t 
-
-                        line_decoupe_notfull_balancingload.dernier = Component.id
+                        line_production_notfull_balancingload.set_time = line_production_notfull_balancingload.set_time + cellules.t 
                         
-                        line_decoupe_notfull_balancingload.stock_esi = line_decoupe_notfull_balancingload.stock_esi - Commande.nombre_unite[i]
-                          
-                    
-                    line_finishing_the_latest = max(lines_used, key=lambda Line: Line.set_time)
-                    when_components_ready = line_finishing_the_latest.set_time
-                    lines_assemblage = [Line for Line in listLignes if Line.types_operation == "assemblage"]
-                    line_assemblage_balancingload = min(lines_assemblage, key=lambda Line: Line.set_time)
-                    starting_assembly = max(when_components_ready,line_assemblage_balancingload.set_time)
-                    
-                    if line_assemblage_balancingload.set_time < starting_assembly:
-                        line_assemblage_balancingload.set_time = starting_assembly                        
-                    if line_assemblage_balancingload.dernier != Component.id:
-                        line_assemblage_balancingload.set_time = line_assemblage_balancingload.set_time + Product.s
-                    
-                    nouvelle_unite = prod_unitaire(
-                            Commande.identifiant,
-                            Commande,
-                            Product,
-                            Product.id,
-                            line_assemblage_balancingload.index,
-                            line_assemblage_balancingload.set_time,
-                            [str(self.components_produced[len(self.components_produced)-5].identifiantComposant),
-                             str(self.components_produced[len(self.components_produced)-4].identifiantComposant),
-                             str(self.components_produced[len(self.components_produced)-3].identifiantComposant),
-                             str(self.components_produced[len(self.components_produced)-2].identifiantComposant),
-                             str(self.components_produced[len(self.components_produced)-1].identifiantComposant)]
-                        )
-                    
-                    self.listProducedUnities.append(nouvelle_unite)
-                    line_assemblage_balancingload.set_time = line_assemblage_balancingload.set_time + Commande.nombre_unite[i]*Product.p #rimuovi setup quando non serve  
-                    line_decoupe_notfull_balancingload.dernier = Component.id
-                    if Commande.date_demande_box == None:
-                        Commande.date_demande_box = starting_assembly + Product.s + Product.p   
+                        line_production_notfull_balancingload.dernier = cellules.id
+                        
+                        line_production_notfull_balancingload.stock_esi = line_production_notfull_balancingload.stock_esi - Commande.nombre_unite[i]
+                        
+                        for Component in components_tobe_produced:
+                            lines_decoupe = [Line for Line in listLignes if Line.types_operation == "decoupe"]
+                            lines_decoupe_notfull = [Line for Line in lines_decoupe if Line.stock_esi > 0]
+                            if lines_decoupe_notfull:
+                                line_decoupe_notfull_balancingload = max(lines_decoupe_notfull, key=lambda Line: Line.stock_esi)
+                                lines_used.append(line_decoupe_notfull_balancingload)
+
+                                if line_decoupe_notfull_balancingload.dernier != Component.id:
+                                    line_decoupe_notfull_balancingload.set_time += Component.s
+    
+                            nouvelle_componant = composant_produit(
+                                len(self.components_produced) + 1,
+                                Component.id,
+                                Component.m,
+                                line_decoupe_notfull_balancingload.index,
+                                line_decoupe_notfull_balancingload.set_time
+                            )
+
+                            self.components_produced.append(nouvelle_componant)
+                            
+                            line_decoupe_notfull_balancingload.set_time = line_decoupe_notfull_balancingload.set_time + Component.t 
+
+                            line_decoupe_notfull_balancingload.dernier = Component.id
+                            
+                            line_decoupe_notfull_balancingload.stock_esi = line_decoupe_notfull_balancingload.stock_esi - Commande.nombre_unite[i]
+                            
+                        
+                        line_finishing_the_latest = max(lines_used, key=lambda Line: Line.set_time)
+                        when_components_ready = line_finishing_the_latest.set_time
+                        lines_assemblage = [Line for Line in listLignes if Line.types_operation == "assemblage"]
+                        line_assemblage_balancingload = min(lines_assemblage, key=lambda Line: Line.set_time)
+                        starting_assembly = max(when_components_ready,line_assemblage_balancingload.set_time)
+                        
+                        if line_assemblage_balancingload.set_time < starting_assembly:
+                            line_assemblage_balancingload.set_time = starting_assembly                        
+                        if line_assemblage_balancingload.dernier != Component.id:
+                            line_assemblage_balancingload.set_time = line_assemblage_balancingload.set_time + Product.s
+                        
+                        nouvelle_unite = prod_unitaire(
+                                Commande.identifiant,
+                                Commande,
+                                Product,
+                                Product.id,
+                                line_assemblage_balancingload.index,
+                                line_assemblage_balancingload.set_time,
+                                [str(self.components_produced[len(self.components_produced)-5].identifiantComposant),
+                                str(self.components_produced[len(self.components_produced)-4].identifiantComposant),
+                                str(self.components_produced[len(self.components_produced)-3].identifiantComposant),
+                                str(self.components_produced[len(self.components_produced)-2].identifiantComposant),
+                                str(self.components_produced[len(self.components_produced)-1].identifiantComposant)]
+                            )
+                        
+                        self.listProducedUnities.append(nouvelle_unite)
+                        line_assemblage_balancingload.set_time = line_assemblage_balancingload.set_time + Commande.nombre_unite[i]*Product.p #rimuovi setup quando non serve  
+                        line_decoupe_notfull_balancingload.dernier = Component.id
+                        if Commande.date_demande_box == None:
+                            Commande.date_demande_box = starting_assembly + Product.s + Product.p   
                 i += 1
             
             Commande.date_envoi = Commande.date_envoi + line_assemblage_balancingload.set_time + Commande.temps_qualite #= max(pi,p2,p3,..)+stockmin+duree
@@ -603,10 +602,10 @@ class FactorySimulation:
 
 # Main
 if __name__ == "__main__":
-    instanceA_csv = r"..\InstanceA.csv"
-    instanceA_json = r"..\instanceA.json"
-    instanceA_sol = r"C:\Scolaire\INSA Lyon\2023 2024\RIP\data\instanceA_c.sol"
-    factory_simulation = FactorySimulation(instanceA_csv, instanceA_json)
+    instance_csv = r"C:\Scolaire\INSA Lyon\2023 2024\RIP\data\InstanceA.csv"
+    instance_json = r"C:\Scolaire\INSA Lyon\2023 2024\RIP\data\instanceA.json"
+    instance_sol = r"C:\Scolaire\INSA Lyon\2023 2024\RIP\data\instanceA.sol"
+    factory_simulation = FactorySimulation(instance_csv, instance_json)
     factory_simulation.run_simulation_production()
     factory_simulation.stockage_unite()
-    factory_simulation.print_results(instanceA_sol)
+    factory_simulation.print_results(instance_sol)
