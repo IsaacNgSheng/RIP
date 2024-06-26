@@ -16,5 +16,5 @@ Le projet “RIP” doit vous permettre de mobiliser tous les concepts vus en AP
 
 ## Compte-rendu
 Nous avons mis le code principal dans un fichier appelé "Rendu Final"
-Vous trouverez le code "MainCode", ainsi que les instances, les fichiers solutions réussies et la grille d'évaluation.
+Vous trouverez le code "MainCode", ainsi que les instances, les fichiers solutions réussis et la grille d'évaluation.
 Nous n'avons réussi que les instances A et B. 
