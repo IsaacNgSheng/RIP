@@ -1,5 +1,5 @@
-# RIP
-Le projet “RIP” doit vous permettre de mobiliser tous les concepts vus en APM au service d'une problème relevant du GI.
+# Rendu final
+Dans ce fichier vous trouverez le code avec les fichiers solutions réussis et la grille d'évaluation.
 
 ## Membres du projet
 * JESTIN Léna
@@ -7,7 +7,5 @@ Le projet “RIP” doit vous permettre de mobiliser tous les concepts vus en AP
 * VANG Sean
 * NG Isaac
 
-## Manuel d'utilisation
-- [ ] Comment exécuter votre code
-
-## Compte-rendu
+## Grille d'évaluation
+Dans la grille d'évaluation vous trouverez tous les problèmes que nous avons rencontré.
